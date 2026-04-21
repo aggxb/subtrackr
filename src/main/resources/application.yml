@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: subtrackr
+
+server:
+  error:
+    include-stacktrace: on_param
+
+logging:
+  level:
+    com.aggxb.subtrackr: debug
