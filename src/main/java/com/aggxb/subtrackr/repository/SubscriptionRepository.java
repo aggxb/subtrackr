@@ -3,13 +3,13 @@ package com.aggxb.subtrackr.repository;
 import com.aggxb.subtrackr.domain.Subscription;
 import com.aggxb.subtrackr.enums.BillingCycle;
 import com.aggxb.subtrackr.enums.SubscriptionStatus;
+import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
+@Repository
 public class SubscriptionRepository {
     public static final List<Subscription> SUBSCRIPTIONS = new ArrayList<>();
 
@@ -28,5 +28,44 @@ public class SubscriptionRepository {
 
     public List<Subscription> findAll() {
         return SUBSCRIPTIONS;
+    }
+
+    public List<Subscription> findByName(String name) {
+        return SUBSCRIPTIONS.stream()
+                .filter(subscription -> subscription.getName().toLowerCase().contains(name.toLowerCase()))
+                .toList();
+    }
+
+    public List<Subscription> findAllOrderByPrice() {
+        return SUBSCRIPTIONS.stream()
+                .sorted(Comparator.comparing(Subscription::getPrice))
+                .toList();
+    }
+
+    public List<Subscription> findAllOrderByName() {
+        return SUBSCRIPTIONS.stream()
+                .sorted(Comparator.comparing(Subscription::getName))
+                .toList();
+    }
+
+    public Optional<Subscription> findById(UUID id) {
+        return SUBSCRIPTIONS.stream()
+                .filter(subscription -> subscription.getId().equals(id))
+                .findFirst();
+    }
+
+    public Subscription save(Subscription subscription) {
+        SUBSCRIPTIONS.add(subscription);
+
+        return subscription;
+    }
+
+    public void delete(Subscription subscription) {
+        SUBSCRIPTIONS.remove(subscription);
+    }
+
+    public void update(Subscription subscription) {
+        delete(subscription);
+        save(subscription);
     }
 }
