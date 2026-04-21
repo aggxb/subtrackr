@@ -10,7 +10,6 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @RequiredArgsConstructor
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
