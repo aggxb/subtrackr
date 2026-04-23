@@ -2,13 +2,17 @@ package com.aggxb.subtrackr.repository;
 
 import com.aggxb.subtrackr.domain.Subscription;
 import com.aggxb.subtrackr.enums.BillingCycle;
+import com.aggxb.subtrackr.enums.Order;
 import com.aggxb.subtrackr.enums.SubscriptionStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Stream;
 
+@Slf4j
 @Repository
 public class SubscriptionRepository {
     public static final List<Subscription> SUBSCRIPTIONS = new ArrayList<>();
@@ -30,22 +34,24 @@ public class SubscriptionRepository {
         return SUBSCRIPTIONS;
     }
 
-    public List<Subscription> findByName(String name) {
-        return SUBSCRIPTIONS.stream()
-                .filter(subscription -> subscription.getName().toLowerCase().contains(name.toLowerCase()))
-                .toList();
-    }
+    public List<Subscription> findWithFilters(String name, Order order) {
+        Stream<Subscription> repositoryStream = SUBSCRIPTIONS.stream();
 
-    public List<Subscription> findAllOrderByPrice() {
-        return SUBSCRIPTIONS.stream()
-                .sorted(Comparator.comparing(Subscription::getPrice))
-                .toList();
-    }
+        if (name != null) {
+            repositoryStream = repositoryStream.filter(subscription -> subscription.getName().toLowerCase().contains(name.toLowerCase()));
+        } else if (order != null) {
+            if (order.name().contains("NAME")) {
+                repositoryStream = repositoryStream.sorted(Comparator.comparing(Subscription::getName));
+            } else {
+                repositoryStream = repositoryStream.sorted(Comparator.comparing(Subscription::getPrice));
+            }
+        } else {
+            repositoryStream = repositoryStream.sorted(Comparator.comparing(Subscription::getCreatedAt));
+        }
 
-    public List<Subscription> findAllOrderByName() {
-        return SUBSCRIPTIONS.stream()
-                .sorted(Comparator.comparing(Subscription::getName))
-                .toList();
+        var subscriptionList = (order != null && order.name().contains("DESC")) ? repositoryStream.toList().reversed() : repositoryStream.toList();
+
+        return subscriptionList;
     }
 
     public Optional<Subscription> findById(UUID id) {

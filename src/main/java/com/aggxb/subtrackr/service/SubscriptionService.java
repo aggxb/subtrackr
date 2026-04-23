@@ -1,10 +1,13 @@
 package com.aggxb.subtrackr.service;
 
 import com.aggxb.subtrackr.domain.Subscription;
+import com.aggxb.subtrackr.dto.request.SubscriptionPostRequest;
 import com.aggxb.subtrackr.dto.request.SubscriptionPutRequest;
+import com.aggxb.subtrackr.dto.request.SubscriptionToggleStatusRequest;
 import com.aggxb.subtrackr.dto.response.SubscriptionResponse;
 import com.aggxb.subtrackr.dto.response.SummaryResponse;
 import com.aggxb.subtrackr.enums.BillingCycle;
+import com.aggxb.subtrackr.enums.Order;
 import com.aggxb.subtrackr.enums.SubscriptionStatus;
 import com.aggxb.subtrackr.mapper.SubscriptionMapper;
 import com.aggxb.subtrackr.repository.SubscriptionRepository;
@@ -24,34 +27,24 @@ public class SubscriptionService {
     private final SubscriptionRepository repository;
     private final SubscriptionMapper mapper;
 
-    public List<SubscriptionResponse> findAll(String name) {
-        var subscriptionList = (name != null) ? repository.findByName(name) : repository.findAll();
+    public List<SubscriptionResponse> findWithFilters(String name, Order order) {
+        var subscriptionList = repository.findWithFilters(name, order);
 
         return mapper.toSubscriptionResponseList(subscriptionList);
-    }
-
-    public List<SubscriptionResponse> findAllOrderByPrice(boolean asc) {
-        var subscriptionList = asc ? repository.findAllOrderByPrice() : repository.findAllOrderByPrice().reversed();
-
-        return mapper.toSubscriptionResponseList(subscriptionList);
-    }
-
-    public List<SubscriptionResponse> findAllOrderByName(boolean asc) {
-        var subscriptionList = asc ? repository.findAllOrderByName() : repository.findAllOrderByName().reversed();
-
-        return mapper.toSubscriptionResponseList(subscriptionList);
-    }
-
-    public SubscriptionResponse findByIdOrThrowNotFound(UUID id) {
-        var subscription = repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subscription with id " + id + "not  found"));
-
-        return mapper.toSubscriptionResponse(subscription);
     }
 
     public Subscription findEntityByIdOrThrowNotFound(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subscription with id " + id + "not  found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subscription with id '" + id + "' not found"));
+    }
+
+    public SubscriptionResponse save(SubscriptionPostRequest subscriptionPostRequest) {
+        var subscriptionToSave = mapper.toSubscription(subscriptionPostRequest);
+        var subscriptionResponse = mapper.toSubscriptionResponse(subscriptionToSave);
+
+        repository.save(subscriptionToSave);
+
+        return subscriptionResponse;
     }
 
     public void delete(UUID id) {
@@ -68,11 +61,13 @@ public class SubscriptionService {
         repository.update(subscription);
     }
 
-    public void toggleStatus(UUID id) {
-        var subscription = findEntityByIdOrThrowNotFound(id);
+    public void toggleStatus(SubscriptionToggleStatusRequest subscriptionToggleStatusRequest) {
+        var subscription = findEntityByIdOrThrowNotFound(subscriptionToggleStatusRequest.id());
         var status = subscription.getStatus();
 
         subscription.setStatus(status == SubscriptionStatus.ACTIVE ? SubscriptionStatus.CANCELED : SubscriptionStatus.ACTIVE);
+
+        mapper.updateSubscription(subscriptionToggleStatusRequest, subscription);
 
         repository.update(subscription);
     }
@@ -82,7 +77,7 @@ public class SubscriptionService {
                 .filter(subscription -> subscription.getStatus().equals(SubscriptionStatus.ACTIVE))
                 .toList();
 
-        BigDecimal DIVIDER = new BigDecimal("12");
+        BigDecimal MONTH_COUNT = new BigDecimal("12");
 
         BigDecimal totalMonthlySubscriptionAmount = activeSubscriptionList.stream()
                 .filter(subscription -> subscription.getCycle().equals(BillingCycle.MONTHLY))
@@ -96,9 +91,9 @@ public class SubscriptionService {
                 .reduce(BigDecimal::add)
                 .orElse(BigDecimal.ZERO);
 
-        BigDecimal totalMonthlySpend = totalYearlySubscriptionAmount.divide(DIVIDER, RoundingMode.HALF_UP).add(totalMonthlySubscriptionAmount);
+        BigDecimal totalMonthlySpend = totalYearlySubscriptionAmount.divide(MONTH_COUNT, RoundingMode.HALF_UP).add(totalMonthlySubscriptionAmount);
 
-        BigDecimal totalYearlySpend = totalMonthlySubscriptionAmount.multiply(DIVIDER).add(totalYearlySubscriptionAmount);
+        BigDecimal totalYearlySpend = totalMonthlySubscriptionAmount.multiply(MONTH_COUNT).add(totalYearlySubscriptionAmount);
 
         int activeSubscriptionCount = activeSubscriptionList.size();
 
