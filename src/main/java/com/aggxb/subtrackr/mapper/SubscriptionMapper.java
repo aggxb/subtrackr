@@ -3,6 +3,7 @@ package com.aggxb.subtrackr.mapper;
 import com.aggxb.subtrackr.domain.Subscription;
 import com.aggxb.subtrackr.dto.request.SubscriptionPostRequest;
 import com.aggxb.subtrackr.dto.request.SubscriptionPutRequest;
+import com.aggxb.subtrackr.dto.request.SubscriptionToggleStatusRequest;
 import com.aggxb.subtrackr.dto.response.SubscriptionResponse;
 import com.aggxb.subtrackr.dto.response.SummaryResponse;
 import org.mapstruct.Mapper;
@@ -19,9 +20,10 @@ public interface SubscriptionMapper {
     Subscription toSubscription(SubscriptionPostRequest subscriptionPostRequest);
 
     @Mapping(target = "modifiedAt", expression = "java(java.time.LocalDateTime.now())")
-    Subscription toSubscription(SubscriptionPutRequest subscriptionPutRequest);
-
     void updateSubscription(SubscriptionPutRequest subscriptionPutRequest, @MappingTarget Subscription subscription);
+
+    @Mapping(target = "modifiedAt", expression = "java(java.time.LocalDateTime.now())")
+    void updateSubscription(SubscriptionToggleStatusRequest subscriptionToggleStatusRequest, @MappingTarget Subscription subscription);
 
     SubscriptionResponse toSubscriptionResponse(Subscription subscription);
 

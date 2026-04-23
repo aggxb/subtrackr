@@ -4,7 +4,7 @@ spring:
 
 server:
   error:
-    include-stacktrace: on_param
+    include-stacktrace: never
 
 logging:
   level:
