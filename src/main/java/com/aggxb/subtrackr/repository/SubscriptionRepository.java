@@ -34,12 +34,14 @@ public class SubscriptionRepository {
         return SUBSCRIPTIONS;
     }
 
-    public List<Subscription> findWithFilters(String name, Order order) {
+    public List<Subscription> findWithFilters(String query, Order order) {
         Stream<Subscription> repositoryStream = SUBSCRIPTIONS.stream();
 
-        if (name != null) {
-            repositoryStream = repositoryStream.filter(subscription -> subscription.getName().toLowerCase().contains(name.toLowerCase()));
-        } else if (order != null) {
+        if (query != null) {
+            repositoryStream = repositoryStream.filter(subscription -> subscription.getName().toLowerCase().contains(query.toLowerCase()));
+        }
+
+        if (order != null) {
             if (order.name().contains("NAME")) {
                 repositoryStream = repositoryStream.sorted(Comparator.comparing(Subscription::getName));
             } else {

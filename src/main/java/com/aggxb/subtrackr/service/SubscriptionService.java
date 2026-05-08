@@ -27,8 +27,8 @@ public class SubscriptionService {
     private final SubscriptionRepository repository;
     private final SubscriptionMapper mapper;
 
-    public List<SubscriptionResponse> findWithFilters(String name, Order order) {
-        var subscriptionList = repository.findWithFilters(name, order);
+    public List<SubscriptionResponse> findWithFilters(String query, Order order) {
+        var subscriptionList = repository.findWithFilters(query, order);
 
         return mapper.toSubscriptionResponseList(subscriptionList);
     }
