@@ -22,10 +22,10 @@ Este repositório contém a **API RESTful (Backend)** do projeto. O grande objet
     * Uso adequado dos verbos HTTP e retornos de Status Code corretos (`201 Created` com header `Location`, `204 No Content`, etc).
 
 ## 🚀 Funcionalidades Principais
-* [x] **Gestão de Assinaturas (CRUD):** Endpoints completos para listar, criar, editar e excluir assinaturas.
-* [x] **Cálculo de Resumo Financeiro:** Endpoint específico (`/summary`) que calcula em tempo real o gasto mensal e anual, convertendo automaticamente planos anuais para custo mensal e vice-versa.
-* [x] **Toggle de Status:** Endpoint inteligente (`PATCH`) exclusivo para alternar assinaturas entre Ativas e Canceladas sem necessidade de enviar o objeto inteiro.
-* [x] **Mapeamento Automatizado:** Uso do **MapStruct** para converter Entidades em Records e vice-versa sem código *boilerplate* repetitivo.
+* **Gestão de Assinaturas (CRUD):** Endpoints completos para listar, criar, editar e excluir assinaturas.
+* **Cálculo de Resumo Financeiro:** Endpoint específico (`/summary`) que calcula em tempo real o gasto mensal e anual, convertendo automaticamente planos anuais para custo mensal e vice-versa.
+* **Toggle de Status:** Endpoint inteligente (`PATCH`) exclusivo para alternar assinaturas entre Ativas e Canceladas sem necessidade de enviar o objeto inteiro.
+* **Mapeamento Automatizado:** Uso do **MapStruct** para converter Entidades em Records e vice-versa sem código *boilerplate* repetitivo.
 
 ## 💻 Tecnologias Utilizadas
 
