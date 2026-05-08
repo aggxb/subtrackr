@@ -78,3 +78,11 @@ $ mvn spring-boot:run
 
 # 5. A API estará rodando localmente na porta 8080
 # Exemplo de teste: http://localhost:8080/api/v1/subscriptions
+
+```
+
+## ☁️ Deploy na Nuvem (Render)
+
+Esta API está rodando em ambiente de produção na **Render**. O processo de deploy foi feito utilizando um **Dockerfile**, o que garante que a aplicação Java rode num container Linux (Alpine) isolado e otimizado.
+
+*(Nota: Como o serviço é gratuito, o servidor entra em modo de suspensão (sleep) após 15 minutos de inatividade. O primeiro pedido após esse período pode demorar até 30 segundos a responder, enquanto o servidor desperta).*
