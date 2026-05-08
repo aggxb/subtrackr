@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Slf4j
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://subtrackr-web.vercel.app", "http://localhost:5173/"})
 @RestController
 @RequestMapping("api/v1/subscriptions")
 public class SubscriptionController {
@@ -29,11 +29,11 @@ public class SubscriptionController {
 
     @GetMapping
     public ResponseEntity<List<SubscriptionResponse>> findAll(
-            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) Order sort) {
-        log.debug("Request to get all subcriptions with params: {}, {}", name, sort);
+        log.debug("Request to get all subscriptions with params: {}, {}", query, sort);
 
-        var subscriptionList = service.findWithFilters(name, sort);
+        var subscriptionList = service.findWithFilters(query, sort);
 
         return ResponseEntity.ok(subscriptionList);
     }
@@ -74,7 +74,7 @@ public class SubscriptionController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("toggle/{id}")
+    @PatchMapping("toggle/{id}")
     public ResponseEntity<Void> toggleStatus(@RequestBody SubscriptionToggleStatusRequest subscriptionToggleStatusRequest) {
         log.debug("Request to toggle status of a subscription with id {}", subscriptionToggleStatusRequest.id());
 
