@@ -3,34 +3,43 @@ package com.aggxb.subtrackr.service;
 import com.aggxb.subtrackr.domain.Subscription;
 import com.aggxb.subtrackr.dto.request.SubscriptionPostRequest;
 import com.aggxb.subtrackr.dto.request.SubscriptionPutRequest;
-import com.aggxb.subtrackr.dto.request.SubscriptionToggleStatusRequest;
 import com.aggxb.subtrackr.dto.response.SubscriptionResponse;
 import com.aggxb.subtrackr.dto.response.SummaryResponse;
 import com.aggxb.subtrackr.enums.BillingCycle;
-import com.aggxb.subtrackr.enums.Order;
-import com.aggxb.subtrackr.enums.SubscriptionStatus;
+import com.aggxb.subtrackr.enums.OwnershipType;
 import com.aggxb.subtrackr.mapper.SubscriptionMapper;
-import com.aggxb.subtrackr.repository.SubscriptionRepository;
-import lombok.AllArgsConstructor;
+import com.aggxb.subtrackr.repository.ISubscriptionRepository;
+import com.aggxb.subtrackr.specs.SubscriptionSpecs;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
 import java.util.UUID;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class SubscriptionService {
-    private final SubscriptionRepository repository;
+
+    private final ISubscriptionRepository repository;
     private final SubscriptionMapper mapper;
 
-    public List<SubscriptionResponse> findWithFilters(String query, Order order) {
-        var subscriptionList = repository.findWithFilters(query, order);
+    public Page<SubscriptionResponse> findWithFilters(String term,
+                                                      OwnershipType ownershipType,
+                                                      Pageable pageable) {
+        Specification<Subscription> spec = Specification
+                .where(SubscriptionSpecs.nameContains(term))
+                .and(SubscriptionSpecs.ownershipTypeEquals(ownershipType));
 
-        return mapper.toSubscriptionResponseList(subscriptionList);
+        Page<Subscription> subscriptionList = repository.findAll(spec, pageable);
+
+        return subscriptionList.map(mapper::toSubscriptionResponse);
     }
 
     public Subscription findEntityByIdOrThrowNotFound(UUID id) {
@@ -39,64 +48,55 @@ public class SubscriptionService {
     }
 
     public SubscriptionResponse save(SubscriptionPostRequest subscriptionPostRequest) {
-        var subscriptionToSave = mapper.toSubscription(subscriptionPostRequest);
-        var subscriptionResponse = mapper.toSubscriptionResponse(subscriptionToSave);
+        Subscription subscriptionToSave = mapper.toSubscription(subscriptionPostRequest);
 
-        repository.save(subscriptionToSave);
+        Subscription savedSubscription = repository.save(subscriptionToSave);
 
-        return subscriptionResponse;
+        return mapper.toSubscriptionResponse(savedSubscription);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void delete(UUID id) {
-        var subscription = findEntityByIdOrThrowNotFound(id);
+        Subscription subscription = findEntityByIdOrThrowNotFound(id);
 
         repository.delete(subscription);
     }
 
-    public void update(SubscriptionPutRequest subscriptionPutRequest) {
-        var subscription = findEntityByIdOrThrowNotFound(subscriptionPutRequest.id());
+    @Transactional(rollbackFor = Exception.class)
+    public void update(UUID id, SubscriptionPutRequest subscriptionPutRequest) {
+        Subscription subscription = findEntityByIdOrThrowNotFound(id);
 
         mapper.updateSubscription(subscriptionPutRequest, subscription);
 
-        repository.update(subscription);
+        repository.save(subscription);
     }
 
-    public void toggleStatus(SubscriptionToggleStatusRequest subscriptionToggleStatusRequest) {
-        var subscription = findEntityByIdOrThrowNotFound(subscriptionToggleStatusRequest.id());
-        var status = subscription.getStatus();
+    @Transactional(rollbackFor = Exception.class)
+    public void toggleStatus(UUID id) {
+        Subscription subscription = findEntityByIdOrThrowNotFound(id);
+        Boolean status = subscription.getStatus();
 
-        subscription.setStatus(status == SubscriptionStatus.ACTIVE ? SubscriptionStatus.CANCELED : SubscriptionStatus.ACTIVE);
+        subscription.setStatus(!status);
 
-        mapper.updateSubscription(subscriptionToggleStatusRequest, subscription);
+        mapper.updateSubscription(id, subscription);
 
-        repository.update(subscription);
+        repository.save(subscription);
     }
 
-    public SummaryResponse getSummary() {
-        List<Subscription> activeSubscriptionList = repository.findAll().stream()
-                .filter(subscription -> subscription.getStatus().equals(SubscriptionStatus.ACTIVE))
-                .toList();
-
+    public SummaryResponse getSummary(OwnershipType ownershipType) {
         BigDecimal MONTH_COUNT = new BigDecimal("12");
 
-        BigDecimal totalMonthlySubscriptionAmount = activeSubscriptionList.stream()
-                .filter(subscription -> subscription.getCycle().equals(BillingCycle.MONTHLY))
-                .map(Subscription::getPrice)
-                .reduce(BigDecimal::add)
-                .orElse(BigDecimal.ZERO);
+        Integer totalActiveSubscriptions = repository.countByOwnershipTypeAndStatus(ownershipType, true);
 
-        BigDecimal totalYearlySubscriptionAmount = activeSubscriptionList.stream()
-                .filter(subscription -> subscription.getCycle().equals(BillingCycle.YEARLY))
-                .map(Subscription::getPrice)
-                .reduce(BigDecimal::add)
-                .orElse(BigDecimal.ZERO);
+        BigDecimal totalMonthlySpend = repository.calculateTotalSpendByStatusAndCycleAndOwnershipType(true, BillingCycle.MONTHLY, ownershipType);
+        BigDecimal totalYearlySpend = repository.calculateTotalSpendByStatusAndCycleAndOwnershipType(true, BillingCycle.YEARLY, ownershipType);
 
-        BigDecimal totalMonthlySpend = totalYearlySubscriptionAmount.divide(MONTH_COUNT, RoundingMode.HALF_UP).add(totalMonthlySubscriptionAmount);
+        if (totalMonthlySpend == null) totalMonthlySpend = BigDecimal.ZERO;
+        if (totalYearlySpend == null) totalYearlySpend = BigDecimal.ZERO;
 
-        BigDecimal totalYearlySpend = totalMonthlySubscriptionAmount.multiply(MONTH_COUNT).add(totalYearlySubscriptionAmount);
+        BigDecimal finalMonthlySpend = totalYearlySpend.divide(MONTH_COUNT, RoundingMode.HALF_UP).add(totalMonthlySpend);
+        BigDecimal finalYearlySpend = totalMonthlySpend.multiply(MONTH_COUNT).add(totalYearlySpend);
 
-        int activeSubscriptionCount = activeSubscriptionList.size();
-
-        return mapper.toSummaryResponse(totalMonthlySpend, totalYearlySpend, activeSubscriptionCount);
+        return mapper.toSummaryResponse(finalMonthlySpend, finalYearlySpend, totalActiveSubscriptions);
     }
 }
